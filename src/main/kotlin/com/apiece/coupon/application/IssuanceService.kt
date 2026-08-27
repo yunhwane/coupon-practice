@@ -6,6 +6,7 @@ import com.apiece.coupon.domain.IssuanceStatus
 import com.apiece.coupon.support.AlreadyUsedException
 import com.apiece.coupon.support.ExpiredException
 import com.apiece.coupon.support.IssuanceNotFoundException
+import com.apiece.coupon.support.NotOwnerException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDateTime
@@ -20,6 +21,10 @@ class IssuanceService(
     fun use(issuanceId: Long, userId: Long): Issuance {
         val issuance = issuanceRepository.findById(issuanceId)
             .orElseThrow { IssuanceNotFoundException() }
+
+        if (issuance.userId != userId) {
+            throw NotOwnerException()
+        }
 
         when (issuance.status) {
             IssuanceStatus.USED -> throw AlreadyUsedException()

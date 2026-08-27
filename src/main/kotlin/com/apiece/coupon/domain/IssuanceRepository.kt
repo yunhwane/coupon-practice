@@ -1,6 +1,5 @@
 package com.apiece.coupon.domain
 
-import com.apiece.coupon.api.dto.IssuanceResponse
 import org.springframework.data.jpa.repository.JpaRepository
 
 interface IssuanceRepository : JpaRepository<Issuance, Long> {
