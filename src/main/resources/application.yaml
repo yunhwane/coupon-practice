@@ -13,7 +13,7 @@ spring:
     hibernate:
       ddl-auto: update
     open-in-view: false
-    show-sql: true
+    show-sql: false
   mvc:
     problemdetails:
       enabled: true

@@ -5,6 +5,8 @@ import com.apiece.coupon.domain.Coupon
 import com.apiece.coupon.domain.CouponRepository
 import com.apiece.coupon.domain.Issuance
 import com.apiece.coupon.domain.IssuanceRepository
+import com.apiece.coupon.infrastructure.messaging.InMemoryIssuanceQueue
+import com.apiece.coupon.infrastructure.messaging.IssuanceRequested
 import com.apiece.coupon.support.AlreadyIssuedException
 import com.apiece.coupon.support.CouponNotFoundException
 import com.apiece.coupon.support.NotStartedException
@@ -16,8 +18,8 @@ import java.time.LocalDateTime
 @Service
 class CouponService(
     private val couponRepository: CouponRepository,
-    private val issuanceRepository: IssuanceRepository,
     private val couponIssuer: CouponIssuer,
+    private val issuanceQueue: InMemoryIssuanceQueue,
 ) {
 
     @Transactional
@@ -44,20 +46,23 @@ class CouponService(
             throw NotStartedException()
         }
 
-        if (issuanceRepository.existsByUserIdAndCouponId(userId, couponId)) {
-            throw AlreadyIssuedException()
-        }
+        couponIssuer.tryIssue(couponId, userId)
 
-        couponIssuer.tryIssue(couponId)
-        couponRepository.incrementIssuedQuantity(couponId)
-
-        return issuanceRepository.save(
-            Issuance(
-                userId = userId,
+        val expiresAt = now.plusDays(coupon.validityDays.toLong())
+        issuanceQueue.enqueue(
+            IssuanceRequested(
                 couponId = couponId,
+                userId = userId,
                 issuedAt = now,
-                expiresAt = now.plusDays(coupon.validityDays.toLong()),
+                expiresAt = expiresAt,
             )
+        )
+
+        return Issuance(
+            userId = userId,
+            couponId = couponId,
+            issuedAt = now,
+            expiresAt = expiresAt,
         )
     }
 }
