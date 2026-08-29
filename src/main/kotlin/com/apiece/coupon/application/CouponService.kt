@@ -4,12 +4,10 @@ import com.apiece.coupon.api.dto.CreateCouponRequest
 import com.apiece.coupon.domain.Coupon
 import com.apiece.coupon.domain.CouponRepository
 import com.apiece.coupon.domain.Issuance
-import com.apiece.coupon.domain.IssuanceRepository
-import com.apiece.coupon.infrastructure.messaging.InMemoryIssuanceQueue
 import com.apiece.coupon.infrastructure.messaging.IssuanceRequested
-import com.apiece.coupon.support.AlreadyIssuedException
 import com.apiece.coupon.support.CouponNotFoundException
 import com.apiece.coupon.support.NotStartedException
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDateTime
@@ -19,7 +17,7 @@ import java.time.LocalDateTime
 class CouponService(
     private val couponRepository: CouponRepository,
     private val couponIssuer: CouponIssuer,
-    private val issuanceQueue: InMemoryIssuanceQueue,
+    private val eventPublisher: ApplicationEventPublisher
 ) {
 
     @Transactional
@@ -49,7 +47,7 @@ class CouponService(
         couponIssuer.tryIssue(couponId, userId)
 
         val expiresAt = now.plusDays(coupon.validityDays.toLong())
-        issuanceQueue.enqueue(
+        eventPublisher.publishEvent(
             IssuanceRequested(
                 couponId = couponId,
                 userId = userId,
